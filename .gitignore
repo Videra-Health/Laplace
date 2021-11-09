@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Copy util
+copy_util.sh
+
+# PyCharm
+.idea/
