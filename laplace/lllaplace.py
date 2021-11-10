@@ -1,12 +1,11 @@
 import torch
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
+from transformers import default_data_collator
 
 from laplace.baselaplace import ParametricLaplace, FullLaplace, KronLaplace, DiagLaplace
-from laplace.feature_extractor import FeatureExtractor
-
-from laplace.matrix import Kron
 from laplace.curvature import BackPackGGN
-
+from laplace.feature_extractor import FeatureExtractor
+from laplace.matrix import Kron
 
 __all__ = ['FullLLLaplace', 'KronLLLaplace', 'DiagLLLaplace']
 
@@ -93,9 +92,11 @@ class LLLaplace(ParametricLaplace):
         self.model.eval()
 
         if self.model.last_layer is None:
-            X, _ = next(iter(train_loader))
+            batch = next(iter(train_loader))
+            for k in batch:
+                batch[k] = batch[k].to(self._device)
             with torch.no_grad():
-                self.model.find_last_layer(X[:1].to(self._device))
+                self.model.find_last_layer(batch)
             self.mean = parameters_to_vector(self.model.last_layer.parameters()).detach()
             self.n_params = len(self.mean)
             self.n_layers = len(list(self.model.last_layer.parameters()))

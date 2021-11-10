@@ -355,16 +355,22 @@ class ParametricLaplace(BaseLaplace):
 
         self.model.eval()
 
-        X, _ = next(iter(train_loader))
+        batch = next(iter(train_loader))
+        for k in batch:
+            batch[k] = batch[k].to(self._device)
         with torch.no_grad():
-            self.n_outputs = self.model(X[:1].to(self._device)).shape[-1]
+            # TODO: Fix me!
+            # self.n_outputs = self.model(batch).logits.shape[-1]
+            self.n_outputs = 1
         setattr(self.model, 'output_size', self.n_outputs)
 
         N = len(train_loader.dataset)
-        for X, y in train_loader:
+        for row in train_loader:
             self.model.zero_grad()
-            X, y = X.to(self._device), y.to(self._device)
-            loss_batch, H_batch = self._curv_closure(X, y, N)
+            for k in batch:
+                batch[k] = batch[k].to(self._device)
+            y = torch.cat([batch['phq_score'].unsqueeze(1), batch['gad_score'].unsqueeze(1)], axis=1)
+            loss_batch, H_batch = self._curv_closure(batch, y, N)
             self.loss += loss_batch
             self.H += H_batch
 

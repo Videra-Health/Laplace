@@ -77,11 +77,11 @@ class CurvatureInterface:
             output function `(batch, outputs)`
         """
         f, phi = model.forward_with_features(x)
-        bsize = len(x)
+        bsize = f.shape[0]
         output_size = f.shape[-1]
 
         # calculate Jacobians using the feature vector 'phi'
-        identity = torch.eye(output_size, device=x.device).unsqueeze(0).tile(bsize, 1, 1)
+        identity = torch.eye(output_size, device=x['session_id'].device).unsqueeze(0).tile(bsize, 1, 1)
         # Jacobians are batch x output x params
         Js = torch.einsum('kp,kij->kijp', phi, identity).reshape(bsize, output_size, -1)
         if model.last_layer.bias is not None:

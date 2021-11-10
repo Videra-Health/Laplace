@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from typing import Tuple, Callable, Optional
+from typing import Tuple, Callable, Optional, Dict
 
 
 __all__ = ['FeatureExtractor']
@@ -33,7 +33,7 @@ class FeatureExtractor(nn.Module):
         else:
             self.set_last_layer(last_layer_name)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Dict) -> torch.Tensor:
         """Forward pass. If the last layer is not known yet, it will be
         determined when this function is called for the first time.
 
@@ -47,7 +47,9 @@ class FeatureExtractor(nn.Module):
             out = self.find_last_layer(x)
         else:
             # if last and penultimate layers are already known
-            out = self.model(x)
+            out = self.model(**x)
+        # Return only the phq regression logits piece of this.
+        out = out.logits[:, :1]
         return out
 
     def forward_with_features(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -88,7 +90,7 @@ class FeatureExtractor(nn.Module):
             self._features[name] = input[0].detach()
         return hook
 
-    def find_last_layer(self, x: torch.Tensor) -> torch.Tensor:
+    def find_last_layer(self, x: Dict) -> torch.Tensor:
         """Automatically determines the last layer of the model with one
         forward pass. It assumes that the last layer is the same for every
         forward pass and that it is an instance of `torch.nn.Linear`.
@@ -98,7 +100,7 @@ class FeatureExtractor(nn.Module):
 
         Parameters
         ----------
-        x : torch.Tensor
+        x : dict
             one batch of data to use as input for the forward pass
         """
         if self.last_layer is not None:
@@ -127,7 +129,7 @@ class FeatureExtractor(nn.Module):
             raise ValueError('The model only has one module.')
 
         # forward pass to find execution order
-        out = self.model(x)
+        out = self.model(**x)
 
         # find the last layer, store features, return output of forward pass
         keys = list(act_out.keys())
